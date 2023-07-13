@@ -7,7 +7,7 @@ const app= express();
 const server = http.createServer(app);
   
 let users=[];
-const io = new Server(server,{cors:{origin:'http://localhost:3000'}});
+const io = new Server(server,{cors:{origin:'*'}});// so that html wala connct ho ske
 app.use(cors());
 io.on('connection', (socket) => {
     console.log('A user connected',socket.id);

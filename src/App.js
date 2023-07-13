@@ -4,13 +4,13 @@ import {io} from 'socket.io-client'
 function App() {
   const localmedia=useRef();
   const remoteMedia=useRef();
-  let stream;
-  const candidatesArray=[]
+  
 const socket=io('http://localhost:8080')
-socket.on('connection',()=>
-{
-  console.log('connected with client');
-})
+let otherUserid;
+// socket.on('connection',()=>
+// {
+//   console.log('connected with client');
+// })
 const configuration = {
   iceServers:[ 
     { urls: 'stun:stun.l.google.com:19302' },
@@ -19,24 +19,42 @@ const configuration = {
 };
 const peerconnection=new RTCPeerConnection(configuration)
 console.log(peerconnection)
-const videoCall=async()=>
-{
- 
-   stream= await navigator.mediaDevices.getUserMedia({audio:true,video:true})
- 
-  //console.log(stream);
-  localmedia.current.srcObject=stream;
-  peerconnection.ontrack=(event)=>
-{
-  console.log('remote connection done')
+peerconnection.ontrack=(event)=>{
   remoteMedia.current.srcObject=event.streams[0]
 }
-  stream.getTracks().forEach(track => {
-    peerconnection.addTrack(track, stream);
-  });
+
+const videoCall=()=>
+{
+ 
+   navigator.mediaDevices.getUserMedia({audio:true,video:true}).then((stream)=>
+   {
+    localmedia.current.srcObject=stream
+    console.log(stream);
+    stream.getTracks().forEach(track => {
+      console.log(track)
+      console.log('stream addtrack')
+      peerconnection.addTrack(track, stream);
+    });
+    // peerconnection.addStream(stream);
+   })
+ 
+  //console.log(stream);
+ 
+ 
+  
+}
+//fun functinality but works
+peerconnection.onconnectionstatechange=(event)=>
+{
+  if(peerconnection.connectionState === 'connected')
+  {
+    videoCall();
+  }
 }
 
-let counter=7;
+
+
+let counter=8;
 
 peerconnection.onicecandidate = (event) => {
   console.log('hello');
@@ -55,10 +73,14 @@ peerconnection.onicecandidate = (event) => {
   }
 };
 
-socket.on('candidates',(candidate)=>
+peerconnection.onnegotiationneeded=(event)=>
+{
+  creatingOffer(otherUserid)
+}
+socket.on('candidates',async (candidate)=>
 {
   
-    peerconnection.addIceCandidate(candidate)
+   await peerconnection.addIceCandidate(candidate)
 
   })
 const creatingOffer=async (id)=>
@@ -72,6 +94,7 @@ console.log(peerconnection.localDescription.sdp)
 
 socket.on('partner found',(id)=>
 {
+  otherUserid=id;
  console.log('connected to ',id);
  console.log('offerer',socket.id)
  creatingOffer(id);
@@ -84,9 +107,10 @@ socket.on('answer',async(data,socketData)=>
 {
    await peerconnection.setRemoteDescription(data.offer);
   console.log('answer',socket.id);
-  const answer=await peerconnection.createAnswer();
+  const answer=await peerconnection.createAnswer({offerToReceiveAudio:true,offerToReceiveVideo:true});
   console.log(answer)
   await peerconnection.setLocalDescription(answer);
+  console.log(peerconnection.localDescription.sdp)
   socket.emit('sending answer',{answer:answer,id:data.id},socketData)
 
 })
@@ -96,11 +120,11 @@ socket.on('receive answer',async(data)=>
 })
 
 
-useEffect(()=>
-{
-videoCall();
+// useEffect(()=>
+// {
+// videoCall();
 
-},[]);
+// },[]);
 // peerconnection.onicecandidate=(event)=>
 // {
 //   if(event.candidate)
@@ -118,7 +142,7 @@ videoCall();
   return (
     <>
     <div>
-      <button id='start' onClick={handleClick}>Start</button>
+      <button id='start' >Start</button>
       <video ref={localmedia} style={{width:300,height:300,padding:0,border:'1px solid red'}} autoPlay muted></video>
       <video ref={remoteMedia} style={{width:300,height:300,padding:0,border:'1px solid red'}} autoPlay ></video>
     </div>
