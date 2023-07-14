@@ -45,7 +45,12 @@ const pairUsers =(user,socket)=>
     console.log("waiting for connection");
   }
 }     
-pairUsers(user,socket)
+
+socket.on('gotTheVideo',()=>
+{
+  pairUsers(user,socket)
+})
+
      
 const findThePartner=(myid)=>
 {

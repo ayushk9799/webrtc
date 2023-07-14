@@ -4,7 +4,7 @@ import {io} from 'socket.io-client'
 function App() {
   const localmedia=useRef();
   const remoteMedia=useRef();
-  
+  let offerer=false;
 const socket=io('http://localhost:8080')
 let otherUserid;
 // socket.on('connection',()=>
@@ -23,7 +23,7 @@ peerconnection.ontrack=(event)=>{
   remoteMedia.current.srcObject=event.streams[0]
 }
 
-const videoCall=()=>
+const videoCall=async()=>
 {
  
    navigator.mediaDevices.getUserMedia({audio:true,video:true}).then((stream)=>
@@ -35,22 +35,21 @@ const videoCall=()=>
       console.log('stream addtrack')
       peerconnection.addTrack(track, stream);
     });
+    socket.emit('gotTheVideo')
     // peerconnection.addStream(stream);
    })
  
   //console.log(stream);
  
- 
-  
 }
 //fun functinality but works
-peerconnection.onconnectionstatechange=(event)=>
-{
-  if(peerconnection.connectionState === 'connected')
-  {
-    videoCall();
-  }
-}
+// peerconnection.onconnectionstatechange=(event)=>
+// {
+//   if(peerconnection.connectionState === 'connected')
+//   {
+//     videoCall();
+//   }
+// }
 
 
 
@@ -75,7 +74,10 @@ peerconnection.onicecandidate = (event) => {
 
 peerconnection.onnegotiationneeded=(event)=>
 {
+  if(offerer)
+  {
   creatingOffer(otherUserid)
+  }
 }
 socket.on('candidates',async (candidate)=>
 {
@@ -85,6 +87,7 @@ socket.on('candidates',async (candidate)=>
   })
 const creatingOffer=async (id)=>
 {
+  offerer=true;
 const offer=await peerconnection.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
 console.log(offer);
 await peerconnection.setLocalDescription(offer)
@@ -120,11 +123,11 @@ socket.on('receive answer',async(data)=>
 })
 
 
-// useEffect(()=>
-// {
-// videoCall();
+useEffect(()=>
+{
+videoCall()
 
-// },[]);
+},[]);
 // peerconnection.onicecandidate=(event)=>
 // {
 //   if(event.candidate)
