@@ -45,13 +45,6 @@ const pairUsers =(user,socket)=>
     console.log("waiting for connection");
   }
 }     
-
-socket.on('gotTheVideo',()=>
-{
-  pairUsers(user,socket)
-})
-
-     
 const findThePartner=(myid)=>
 {
  
@@ -62,9 +55,26 @@ const findThePartner=(myid)=>
       return users[i].partnerId;
   }
 }
-
-
 }
+socket.on('skipped',()=>
+{
+  let meObject=users.filter((user)=>user.myId===socket.id)
+  
+  meObject[0].partnerId=null;
+  let partnerObject=users.filter((user)=>user.partnerId===socket.id)
+  partnerObject[0].partnerId=null;
+   
+})
+socket.on('gotTheVideo',()=>
+{
+  pairUsers(user,socket)
+})
+
+     
+
+
+
+
   
     socket.on('chat message', (msg) => {
       console.log('Message:', msg);

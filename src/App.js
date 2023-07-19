@@ -5,6 +5,8 @@ function App() {
   const localmedia=useRef();
   const remoteMedia=useRef();
   let offerer=false;
+  let stream;
+  let peerconnection;
 const socket=io('http://localhost:8080')
 let otherUserid;
 // socket.on('connection',()=>
@@ -17,44 +19,22 @@ const configuration = {
     // Add more STUN or TURN servers if necessary
   ],
 };
-const peerconnection=new RTCPeerConnection(configuration)
+const videoCall=async()=>
+{
+ 
+ stream= await  navigator.mediaDevices.getUserMedia({audio:true,video:true})
+    localmedia.current.srcObject=stream
+    console.log(stream);
+    connection();
+    // peerconnection.addStream(stream);
+   }
+const connection=()=>
+{
+peerconnection=new RTCPeerConnection(configuration)
 console.log(peerconnection)
 peerconnection.ontrack=(event)=>{
   remoteMedia.current.srcObject=event.streams[0]
 }
-
-const videoCall=async()=>
-{
- 
-   navigator.mediaDevices.getUserMedia({audio:true,video:true}).then((stream)=>
-   {
-    localmedia.current.srcObject=stream
-    console.log(stream);
-    stream.getTracks().forEach(track => {
-      console.log(track)
-      console.log('stream addtrack')
-      peerconnection.addTrack(track, stream);
-    });
-    socket.emit('gotTheVideo')
-    // peerconnection.addStream(stream);
-   })
- 
-  //console.log(stream);
- 
-}
-//fun functinality but works
-// peerconnection.onconnectionstatechange=(event)=>
-// {
-//   if(peerconnection.connectionState === 'connected')
-//   {
-//     videoCall();
-//   }
-// }
-
-
-
-let counter=8;
-
 peerconnection.onicecandidate = (event) => {
   console.log('hello');
   if (event.candidate) {
@@ -79,6 +59,38 @@ peerconnection.onnegotiationneeded=(event)=>
   creatingOffer(otherUserid)
   }
 }
+stream.getTracks().forEach(track => {
+  console.log(track)
+  console.log('stream addtrack')
+  peerconnection.addTrack(track, stream);
+});
+socket.emit('gotTheVideo')
+}
+
+
+
+
+ 
+  //console.log(stream);
+ 
+
+
+
+
+//fun functinality but works
+// peerconnection.onconnectionstatechange=(event)=>
+// {
+//   if(peerconnection.connectionState === 'connected')
+//   {
+//     videoCall();
+//   }
+// }
+
+
+
+let counter=8;
+
+
 socket.on('candidates',async (candidate)=>
 {
   
@@ -122,7 +134,18 @@ socket.on('receive answer',async(data)=>
    await peerconnection.setRemoteDescription(data.answer);
 })
 
-
+const handleSkip=()=>
+{
+  
+  peerconnection.close();
+  delete peerconnection.onicecandidate;
+  delete peerconnection.ontrack;
+   delete peerconnection.onnegotiationneeded;
+  peerconnection=null;
+  connection();
+  console.log(peerconnection)
+   socket.emit('skipped');
+}
 useEffect(()=>
 {
 videoCall()
@@ -145,7 +168,7 @@ videoCall()
   return (
     <>
     <div>
-      <button id='start' >Start</button>
+      <button onClick={handleSkip}>skip</button>
       <video ref={localmedia} style={{width:300,height:300,padding:0,border:'1px solid red'}} autoPlay muted></video>
       <video ref={remoteMedia} style={{width:300,height:300,padding:0,border:'1px solid red'}} autoPlay ></video>
     </div>
