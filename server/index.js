@@ -15,6 +15,10 @@ io.on('connection', (socket) => {
   //  {
   //   console.log(offer)
   //  })
+  socket.on('error',(error)=>
+  {
+    console.log('server side error',error)
+  })
 
     let user={
       myId:socket.id,

@@ -8,6 +8,19 @@ function App() {
   let stream;
   let peerconnection;
 const socket=io('http://localhost:8080')
+socket.on('connect_error', (error) => {
+  console.error('Connection Error:', error.message);
+  
+});
+
+socket.on('connect_timeout', (timeout) => {
+  console.error('Connection Timeout:', timeout);
+});
+
+socket.on('error', (error) => {
+ 
+  console.error(error.message);
+});
 let otherUserid;
 // socket.on('connection',()=>
 // {
@@ -21,19 +34,36 @@ const configuration = {
 };
 const videoCall=async()=>
 {
- 
+ try{
  stream= await  navigator.mediaDevices.getUserMedia({audio:true,video:true})
     localmedia.current.srcObject=stream
     console.log(stream);
     connection();
+ }
+ catch(error)
+ {
+  alert('Error Switch ON your camera ')
+  console.log('error gettting media devices',error);
+  setTimeout(() => {
+    videoCall();
+  }, 1000);
+ }
     // peerconnection.addStream(stream);
    }
 const connection=()=>
 {
+  try{
 peerconnection=new RTCPeerConnection(configuration)
 console.log(peerconnection)
 peerconnection.ontrack=(event)=>{
+  const streamscheck=event.streams;
+  if(!(streamscheck.length===0))
+  {
   remoteMedia.current.srcObject=event.streams[0]
+  }
+  else{
+    console.log("stream stopped")
+  }
 }
 peerconnection.onicecandidate = (event) => {
   console.log('hello');
@@ -59,6 +89,22 @@ peerconnection.onnegotiationneeded=(event)=>
   creatingOffer(otherUserid)
   }
 }
+
+peerconnection.onconnectionstatechange=()=>
+{
+  console.log(peerconnection.connectionState)
+  if(peerconnection.connectionState==='failed')
+  {
+    peerconnection.close();
+  delete peerconnection.onicecandidate;
+  delete peerconnection.ontrack;
+   delete peerconnection.onnegotiationneeded;
+  peerconnection=null;
+  connection();
+  console.log(peerconnection)
+   socket.emit('skipped');
+  }
+}
 stream.getTracks().forEach(track => {
   console.log(track)
   console.log('stream addtrack')
@@ -66,25 +112,12 @@ stream.getTracks().forEach(track => {
 });
 socket.emit('gotTheVideo')
 }
+catch(error)
+{
+  console.log('RTC connection error ',error)
+}
+}
 
-
-
-
- 
-  //console.log(stream);
- 
-
-
-
-
-//fun functinality but works
-// peerconnection.onconnectionstatechange=(event)=>
-// {
-//   if(peerconnection.connectionState === 'connected')
-//   {
-//     videoCall();
-//   }
-// }
 
 
 
@@ -99,6 +132,7 @@ socket.on('candidates',async (candidate)=>
   })
 const creatingOffer=async (id)=>
 {
+  try{
   offerer=true;
 const offer=await peerconnection.createOffer({offerToReceiveAudio:true,offerToReceiveVideo:true});
 console.log(offer);
@@ -106,7 +140,11 @@ await peerconnection.setLocalDescription(offer)
 socket.emit('offer',{offer:peerconnection.localDescription,id:id})
 console.log(peerconnection.localDescription.sdp)
 }
-
+catch(error)
+{
+  console.log(error)
+}
+}
 socket.on('partner found',(id)=>
 {
   otherUserid=id;
@@ -151,19 +189,6 @@ useEffect(()=>
 videoCall()
 
 },[]);
-// peerconnection.onicecandidate=(event)=>
-// {
-//   if(event.candidate)
-//   {
-//     console.log('true')
-//     console.log(event.candidate)
-//   }
-//   else
-//   {
-//     console.log('false');
-//   }
-// }
-
 
   return (
     <>
