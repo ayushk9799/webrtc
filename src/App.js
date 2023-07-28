@@ -70,7 +70,7 @@ peerconnection.onicecandidate = (event) => {
   if (event.candidate) {
     console.log(counter++);
     console.log(event.candidate)
-    socket.emit('candidate',event.candidate)
+    socket.emit('candidate',{candidate:event.candidate,partnerId:otherUserid})
     // candidatesArray.push(event.push)
     // const iceCandidate = new RTCIceCandidate(event.candidate);
     // peerconnection.addIceCandidate(iceCandidate);
@@ -82,29 +82,8 @@ peerconnection.onicecandidate = (event) => {
   }
 };
 
-peerconnection.onnegotiationneeded=(event)=>
-{
-  if(offerer)
-  {
-  creatingOffer(otherUserid)
-  }
-}
 
-peerconnection.onconnectionstatechange=()=>
-{
-  console.log(peerconnection.connectionState)
-  if(peerconnection.connectionState==='failed')
-  {
-    peerconnection.close();
-  delete peerconnection.onicecandidate;
-  delete peerconnection.ontrack;
-   delete peerconnection.onnegotiationneeded;
-  peerconnection=null;
-  connection();
-  console.log(peerconnection)
-   socket.emit('skipped');
-  }
-}
+
 stream.getTracks().forEach(track => {
   console.log(track)
   console.log('stream addtrack')
@@ -145,6 +124,10 @@ catch(error)
   console.log(error)
 }
 }
+socket.on('save partner',(data)=>
+{
+  otherUserid=data;
+})
 socket.on('partner found',(id)=>
 {
   otherUserid=id;
@@ -157,7 +140,7 @@ socket.on('partner found',(id)=>
 })
 
 socket.on('answer',async(data,socketData)=>
-{
+{ console.log(peerconnection.connectionState)
    await peerconnection.setRemoteDescription(data.offer);
   console.log('answer',socket.id);
   const answer=await peerconnection.createAnswer({offerToReceiveAudio:true,offerToReceiveVideo:true});
@@ -169,21 +152,34 @@ socket.on('answer',async(data,socketData)=>
 })
 socket.on('receive answer',async(data)=>
 {
+  try{
+    console.log(peerconnection.connectionState)
    await peerconnection.setRemoteDescription(data.answer);
+  }
+  catch(e){
+    console.log(e)
+  }
+})
+socket.on('skipped',()=>
+{
+  console.log('skipped')
+    peerconnection.close()
+  peerconnection=null;
+  
+  connection();
+  console.log(peerconnection)
+
 })
 
 const handleSkip=()=>
 {
-  
-  peerconnection.close();
-  delete peerconnection.onicecandidate;
-  delete peerconnection.ontrack;
-   delete peerconnection.onnegotiationneeded;
+    peerconnection.close()
   peerconnection=null;
-  connection();
-  console.log(peerconnection)
+    
    socket.emit('skipped');
+   connection();
 }
+
 useEffect(()=>
 {
 videoCall()
