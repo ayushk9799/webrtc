@@ -12,10 +12,7 @@ const io = new Server(server,{cors:{origin:'*'}});// so that html wala connct ho
 app.use(cors());
 io.on('connection', (socket) => {
     console.log('A user connected',socket.id);
-  //  socket.on('offer',(offer)=>
-  //  {
-  //   console.log(offer)
-  //  })
+ 
   socket.on('error',(error)=>
   {
     console.log('server side error',error)
@@ -31,6 +28,7 @@ io.on('connection', (socket) => {
 const pairUsers =(user,socket)=>
 {
   const availableUsers=[...users].filter(([socketID,user])=>user.myId!=socket.id&&user.partnerId===null);
+  console.log("availableusers ", availableUsers.length)
   const getRandomNumber=(n)=>
   {
     return Math.floor(Math.random()*n);
@@ -39,12 +37,11 @@ const pairUsers =(user,socket)=>
   {
     let random=getRandomNumber(availableUsers.length)
   let partner=availableUsers[random]
-  // user.partnerId=partner.myId;
-  // partner.partnerId=user.myId;
+  
   users.get(socket.id).partnerId=partner[0]
   users.get(partner[0]).partnerId=user.myId;
   console.log('partner found')
-  console.log(users);
+  //console.log(users);
   socket.emit('partner found',partner[1].myId)
   io.to(partner[0]).emit('save partner',socket.id);
   }
@@ -70,7 +67,11 @@ socket.on('skipped',()=>
 })
 socket.on('gotTheVideo',()=>
 {
-  pairUsers(user,socket)
+  if(user.partnerId===null)
+  {
+    pairUsers(user,socket)
+
+  }
 })
 
      
@@ -80,13 +81,13 @@ socket.on('gotTheVideo',()=>
 
   
     socket.on('chat message', (msg) => {
-      console.log('Message:', msg);
+     // console.log('Message:', msg);
       io.emit('chat message', msg);
     });
 const socketData=socket.id;
     socket.on('offer',(data)=>
     {
-      console.log(data);
+      //console.log(data);
        io.to(data.id).emit('answer',data,socketData)
     })
     socket.on('candidate',({candidate,partnerId})=>
@@ -105,6 +106,24 @@ const socketData=socket.id;
     //   console.log('A user disconnected');
     // });
     // socket.on('offer',(data))
+
+    socket.on('disconnect', () => {
+      let me=users.get(socket.id)
+      let other;
+      if(!(me.partnerId))
+      {
+      
+      }
+      else{
+       other=users.get(me.partnerId)
+       if(other){
+         other.partnerId=null;
+       }
+      }
+       users.delete(socket.id)
+       console.log('A user disconnected');
+      
+     });
   });
 
 app.use(express.json());
