@@ -7,7 +7,7 @@ function App() {
   let offerer=false;
   let stream;
   let peerconnection;
-const socket=io('http://localhost:8080')
+const socket=io('http://3.108.28.21:8081')
 socket.on('connect_error', (error) => {
   console.error('Connection Error:', error.message);
   
