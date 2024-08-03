@@ -3,19 +3,16 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 const app= express();
+app.use(express.json());
 
 const server = http.createServer(app);
   
 const users=new Map();
-
-const io = new Server(server,{cors:{origin:'*'}});// so that html wala connct ho ske
+console.log(users.size)
+const io = new Server(server,{cors:{origin:'*'}});
 app.use(cors());
 io.on('connection', (socket) => {
     console.log('A user connected',socket.id);
-  //  socket.on('offer',(offer)=>
-  //  {
-  //   console.log(offer)
-  //  })
   socket.on('error',(error)=>
   {
     console.log('server side error',error)
@@ -23,11 +20,12 @@ io.on('connection', (socket) => {
 
     let user={
       myId:socket.id,
-      partnerId:null
+      partnerId:null,
+      gender:null
     }
     users.set(socket.id,user)
-    
-     
+    console.log(users.size)
+   
 const pairUsers =(user,socket)=>
 {
   const availableUsers=[...users].filter(([socketID,user])=>user.myId!=socket.id&&user.partnerId===null);
@@ -70,15 +68,9 @@ socket.on('skipped',()=>
 })
 socket.on('gotTheVideo',()=>
 {
+  console.log('gotTheVideo');
   pairUsers(user,socket)
 })
-
-     
-
-
-
-
-  
     socket.on('chat message', (msg) => {
       console.log('Message:', msg);
       io.emit('chat message', msg);
@@ -86,6 +78,7 @@ socket.on('gotTheVideo',()=>
 const socketData=socket.id;
     socket.on('offer',(data)=>
     {
+      console.log('offer')
       console.log(data);
        io.to(data.id).emit('answer',data,socketData)
     })
@@ -100,14 +93,28 @@ const socketData=socket.id;
       io.to(socketData).emit('receive answer',data)
     })
   
-    // socket.on('disconnect', () => {
-    //   users=users.filter(user=>user.myid!=socket.id)
-    //   console.log('A user disconnected');
-    // });
+    socket.on('disconnect', () => {
+     let me=users.get(socket.id)
+     console.log(me)
+     let other;
+     if(!(me.partnerId))
+     {
+     
+     }
+     else{
+      other=users.get(me.partnerId)
+      if(other){
+        other.partnerId=null;
+      }
+     }
+      users.delete(socket.id)
+      console.log('A user disconnected');
+      console.log(users.size)
+      console.log(users)
+    });
     // socket.on('offer',(data))
   });
 
-app.use(express.json());
 app.get('/',(req,res)=>
 {
     res.send('hello');
